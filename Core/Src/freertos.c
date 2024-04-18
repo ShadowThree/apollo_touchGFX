@@ -154,7 +154,8 @@ __weak void TouchGFX_Task(void *argument)
 		HAL_GPIO_TogglePin(LED0_GPIO_Port, LED0_Pin);
 		LOG_DBG("change color to %s\n", color[cur_color]);
 		for(uint32_t i = 0; i < 1024*600*2; i += 2) {
-			*(uint16_t*)(0xC0000000 + i) = color_code[cur_color];
+			//*(uint16_t*)(0xC0800000 + i) = color_code[cur_color];
+			*(uint16_t*)(0xC0000000 + i) = *(uint16_t*)(0xC1000000 + 1024*600*2 * cur_color + i);
 		}
 		if(++cur_color >= 3) {
 			cur_color = 0;

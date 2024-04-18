@@ -123,14 +123,44 @@ int main(void)
 		LOG_DBG("SDRAM test OK\n");
 	}
 	
-	// NAND flash test
-	NAND_FLASH_STA_t nand_flash_sta = NAND_FLASH_OK;
-	nand_flash_sta = Nand_Flash_test();
-	if(nand_flash_sta != NAND_FLASH_OK) {
-		LOG_ERR("Nand Flash test err[%d]\n", nand_flash_sta);
-	} else {
-		LOG_DBG("Nand Flash test OK\n");
+		// NAND flash test
+//	NAND_FLASH_STA_t nand_flash_sta = NAND_FLASH_STA_OK;
+//	nand_flash_sta = NAND_FLASH_test();
+//	if(nand_flash_sta != NAND_FLASH_STA_OK) {
+//		LOG_ERR("Nand Flash test err[%d]\n", nand_flash_sta);
+//	} else {
+//		LOG_DBG("Nand Flash test OK\n");
+//	}
+	
+	NAND_AddressTypeDef nand_addr = {.Page = 0, .Block = 0, .Plane = 0};
+	
+	#if	WRITE_DATA_TO_NAND_FLASH	// Just run at the first time
+	// LCD(1024*600) * RGB565(2Bytes) * 3picture(Red, Green, Blue)
+	// 1024 * 600 * 2 * 3 = 3686400 Bytes
+	for(uint8_t i = 0; i < (3686400 + BLOCK_SIZE - 1) / BLOCK_SIZE; i++) {
+		nand_addr.Block = i;
+		HAL_NAND_Erase_Block(&hnand1, &nand_addr);
 	}
+	LOG_DBG("Nand Flash erase block ok\n");
+	uint16_t color_code[] = {0xF800, 0x07E0, 0x001F};
+	for(uint8_t i = 0; i < 3; i++) {
+		for(uint32_t j = 0; j < 1024 * 600*2; j+=2) {
+			*(uint16_t*)(0xC0000000 + i*1024*600*2 + j) = color_code[i];
+		}
+	}
+	LOG_DBG("Make data ok\n");
+	nand_addr.Block = 0;
+	HAL_NAND_Write_Page_8b(&hnand1, &nand_addr, (uint8_t*)0xC0000000, (3686400 + PAGE_SIZE - 1) / PAGE_SIZE);
+	LOG_DBG("Nand Flash write data ok\n");
+	#endif	/* WRITE_DATA_TO_NAND_FLASH */
+	
+	uint32_t start_time = HAL_GetTick();
+	nand_addr.Page = 0;
+	nand_addr.Block = 0;
+	nand_addr.Plane = 0;
+	HAL_NAND_Read_Page_8b(&hnand1, &nand_addr, (unsigned char*)0xC1000000, (3686400 + PAGE_SIZE - 1) / PAGE_SIZE);
+
+	LOG_DBG("read NandFlash time %d\n", HAL_GetTick() - start_time);
 	
 	// enable LCD backlight
 	HAL_GPIO_WritePin(LCD_BL_GPIO_Port, LCD_BL_Pin, GPIO_PIN_SET);
